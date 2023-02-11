@@ -44,7 +44,7 @@ To enter text: press Start + Right, up and down selects the letter, left and rig
 
     cd build
 
-    cmake .. -DOPENGL_BACKEND=GLES -DCMAKE_BUILD_TYPE=Release -DLAYOUT=home  -DUSE_ICONV=OFF -DDISABLE_VIDEOCORE=ON -DUSE_LIBVLC=OFF -DCMAKE_INSTALL_PREFIX:FILE="engine"
+    cmake .. -DOPENGL_BACKEND=GLES -DCMAKE_BUILD_TYPE=MinSizeRel -DLAYOUT=home  -DUSE_ICONV=OFF -DDISABLE_VIDEOCORE=ON -DUSE_LIBVLC=OFF -DUSE_NO_GLSL="ON" -DSDL_DISABLE_CONTROLLER_API="ON" -DSDL_RESOLUTION_INDEPENDANCE="ON" -DCMAKE_INSTALL_PREFIX:FILE="engine"
 
     cd engine
 
@@ -57,18 +57,18 @@ At the end, you want the `engine.zip` file is what you want.
 # Game folder structure
 
 - gemrb/games/GAME_ID
- - **bg1** for Baldur's Gate 1
- - **bg2** for Baldur's Gate 2
- - **iwd** for Icewind Dale
- - **iwd2** for Icewind Dale 2
- - **pst** for Planescape Torment
+  - **bg1** for Baldur's Gate 1
+  - **bg2** for Baldur's Gate 2
+  - **iwd** for Icewind Dale
+  - **iwd2** for Icewind Dale 2
+  - **pst** for Planescape Torment
 
 # TODO:
 
 - [x] Get a game to work!
-- [ ] Add custom configs where needed
-- [ ] Add custom gptokeyb mappings if needed
-- [ ] Fix flickering cursor
+- [ ] Add per game configs where needed
+- [ ] Add per game gptokeyb mappings if needed
+- [x] Fix flickering cursor
 
 # Thanks
 

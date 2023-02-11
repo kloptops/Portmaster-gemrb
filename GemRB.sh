@@ -31,6 +31,76 @@ $ESUDO chmod 666 log.txt
 export TERM=linux
 printf "\033c" > $CUR_TTY
 
+## Converts path names to game codes
+PROPER_GAME_ID() {
+  gamename=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+
+  case $gamename in
+    bg2|baldur*gate\ 2|baldur*gate\ ii)
+      echo "bg2"
+      ;;
+    bg1|baldur*gate)
+      echo "bg1"
+      ;;
+    bg2ee)
+      echo "bg2ee"
+      ;;
+    pst|planescape*)
+      echo "pst"
+      ;;
+    how|*how*|*totl*)
+      echo "how"
+      ;;
+    iwd|icewind\ dale)
+      echo "iwd"
+      ;;
+    iwd2|icewind\ dale\ 2)
+      echo "iwd2"
+      ;;
+    demo)
+      echo "demo"
+      ;;
+    *)
+      echo $gamename
+      ;;
+  esac
+}
+
+## Converts path name to proper name
+PROPER_GAME_NAME() {
+  gameid=$(PROPER_GAME_ID "$1")
+  case $gameid in
+    bg1)
+      echo "Baldurs Gate"
+      ;;
+    bg2)
+      echo "Baldurs Gate II"
+      ;;
+    bg2ee)
+      echo "Baldurs Gate II EE"
+      ;;
+    pst)
+      echo "Planescape Torment"
+      ;;
+    how)
+      echo "Icewind Dale - HoW or ToTL"
+      ;;
+    iwd)
+      echo "Icewind Dale"
+      ;;
+    iwd2)
+      echo "Icewind Dale 2"
+      ;;
+    demo)
+      echo "Demo Game"
+      ;;
+    *)
+      echo $1
+      ;;
+  esac
+}
+
+# Extract the game if it exists
 if [ -f "$GAMEDIR/engine.zip" ]; then
   if [ -d "$GAMEDIR/engine" ]; then
     $ESUDO echo "Removing old engine."
@@ -42,6 +112,7 @@ if [ -f "$GAMEDIR/engine.zip" ]; then
   $ESUDO rm -f "$GAMEDIR/engine.zip"
 fi
 
+# Copy over the demo game
 if [ -d "$GAMEDIR/engine/demo" ]; then
   # Copy demo over, but dont overwrite just incase it has been modified.
   if [ -d "$GAMEDIR/games/demo" ]; then
@@ -51,6 +122,7 @@ if [ -d "$GAMEDIR/engine/demo" ]; then
   fi
 fi
 
+# Select a game.
 if [ -z ${GAME+x} ]; then
 
   printf "\e[?25h" > $CUR_TTY
@@ -58,7 +130,10 @@ if [ -z ${GAME+x} ]; then
 
   $GPTOKEYB "dialog" -c "${GAMEDIR}/gemrb-menu.gptk" &
 
-  GAMEEXES=( $(find games/ -maxdepth 2 -iname 'chitin.key' | sort) );
+  readarray -d '' GAMEEXE < <(find games/ -maxdepth 2 -iname 'chitin.key' -print0)
+  IFS=$'\n' GAMEEXES=($(sort <<<"${GAMEEXE[*]}"))
+  unset IFS
+
   if [ "${#GAMEEXES[@]}" -eq 0 ]; then
     dialog \
     --backtitle "Gem RB" \
@@ -78,9 +153,10 @@ if [ -z ${GAME+x} ]; then
   OFFSET=0
   if [ -f "${GAMEDIR}/save/last_game" ]; then
     LAST_GAME=$(cat "${GAMEDIR}/save/last_game")
-    VN_CHOICES+=(0 "$LAST_GAME")
+    LAST_NAME=$(PROPER_GAME_NAME $LAST_GAME)
+    VN_CHOICES+=(0 "${LAST_NAME}")
     VN_DIRS+=("$LAST_GAME")
-    echo "0 -> **${LAST_GAME}**" 2>&1 | tee -a ./log.txt
+    echo "0 -> **${LAST_GAME}** -> ${LAST_NAME}" 2>&1 | tee -a ./log.txt
     OFFSET=1
   else
     LAST_GAME=""
@@ -89,18 +165,19 @@ if [ -z ${GAME+x} ]; then
   for i in "${!GAMEEXES[@]}"; do
     VN_PATH=$(dirname "${GAMEEXES[$i]}")
     VN_DIR=${VN_PATH##*/}
+    VN_NAME=$(PROPER_GAME_NAME "$VN_DIR")
 
     if [ "$VN_DIR" = "$LAST_GAME" ]; then
       OFFSET=$(($OFFSET-1))
     else
       i=$(($i+$OFFSET))
-      echo "$i -> ${VN_DIR}" 2>&1 | tee -a ./log.txt
-      VN_SHORTCUT="$PORTDIR/${VN_DIR}.sh"
+      echo "$i -> ${VN_DIR} -> ${VN_NAME}" 2>&1 | tee -a ./log.txt
+      VN_SHORTCUT="$PORTDIR/${VN_NAME}.sh"
       VN_DIRS+=("${VN_DIR}")
       if [ -f "$PORTDIR/${VN_DIR}.sh" ]; then
-        VN_CHOICES+=($i "${VN_DIR} - Installed")
+        VN_CHOICES+=($i "${VN_NAME} - Installed")
       else
-        VN_CHOICES+=($i "${VN_DIR}")
+        VN_CHOICES+=($i "${VN_NAME}")
       fi
     fi
   done
@@ -114,7 +191,7 @@ if [ -z ${GAME+x} ]; then
     GAME="${VN_DIRS[0]}"
   else
     GAME_SELECT=(dialog \
-      --backtitle "Gem RB" \
+      --backtitle "GemRB" \
       --title "[ Select Game ]" \
       --clear \
       --menu "Choose Your Game" $height $width 15)
@@ -146,14 +223,15 @@ if [ -z ${GAME+x} ]; then
       fi
 
       IN_GAME="${VN_DIRS[$IN_CHOICE]}"
+      IN_GAME_NAME=$(PROPER_GAME_NAME "$IN_GAME")
 
-      printf "#!/usr/bin/bash\nGAME=$IN_GAME $PORTDIR/GemRB.sh\n" | $ESUDO tee "$PORTDIR/$IN_GAME.sh"
+      printf "#!/usr/bin/bash\nGAME=\"$IN_GAME\" $PORTDIR/GemRB.sh\n" | $ESUDO tee "$PORTDIR/$IN_GAME_NAME.sh"
 
       dialog \
         --backtitle "Gem RB" \
         --title "[ Success ]" \
         --clear \
-        --msgbox "Installed shortcut for $IN_GAME\n\nRestart Emulation Station to find the game under ports." $height $width > $CUR_TTY
+        --msgbox "Installed shortcut for $IN_GAME_NAME\n\nRestart Emulation Station to find the game under ports." $height $width > $CUR_TTY
 
       $ESUDO kill -9 $(pidof gptokeyb)
       $ESUDO systemctl restart oga_events &
@@ -179,7 +257,7 @@ printf "\033c" > $CUR_TTY
 ## RUN SCRIPT HERE
 
 # Install appropriate GemRB.cfg
-GAMELC=$(echo "$GAME" | tr '[:upper:]' '[:lower:]')
+GAMEID=$(PROPER_GAME_ID "$GAME")
 if [ ! -f "${GAMEDIR}/games/${GAME}/GemRB.cfg" ]; then
   if [ -f "${GAMEDIR}/configs/GemRB.cfg.${GAMELC}" ]; then
     # Does one for this game exist?
@@ -190,6 +268,12 @@ if [ ! -f "${GAMEDIR}/games/${GAME}/GemRB.cfg" ]; then
   fi
 fi
 
+if [ -f "${GAMEDIR}/gemrb-${GAMELC}.gptk" ]; then
+  GPTOKEYB_CFG="${GAMEDIR}/gemrb-${GAMELC}.gptk"
+else
+  GPTOKEYB_CFG="${GAMEDIR}/gemrb.gptk"
+fi
+
 export TEXTINPUTPRESET="Name"
 export TEXTINPUTINTERACTIVE="Y"
 export TEXTINPUTNOAUTOCAPITALS="Y"
@@ -198,7 +282,7 @@ export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
 export PYTHONHOME="$GAMEDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
-$GPTOKEYB "gemrb" -c "${GAMEDIR}/gemrb.gptk" textinput &
+$GPTOKEYB "gemrb" -c "${GPTOKEYB_CFG}" textinput &
 $TASKSET ./gemrb "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
