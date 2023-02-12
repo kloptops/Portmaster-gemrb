@@ -33,9 +33,9 @@ printf "\033c" > $CUR_TTY
 
 ## Converts path names to game codes
 PROPER_GAME_ID() {
-  gamename=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+  GAMENAME=$(echo "$1" | tr '[:upper:]' '[:lower:]')
 
-  case $gamename in
+  case $GAMENAME in
     bg2|baldur*gate\ 2|baldur*gate\ ii)
       echo "bg2"
       ;;
@@ -61,15 +61,15 @@ PROPER_GAME_ID() {
       echo "demo"
       ;;
     *)
-      echo $gamename
+      echo $GAMENAME
       ;;
   esac
 }
 
 ## Converts path name to proper name
 PROPER_GAME_NAME() {
-  gameid=$(PROPER_GAME_ID "$1")
-  case $gameid in
+  GAMEID=$(PROPER_GAME_ID "$1")
+  case $GAMEID in
     bg1)
       echo "Baldurs Gate"
       ;;
@@ -95,7 +95,7 @@ PROPER_GAME_NAME() {
       echo "Demo Game"
       ;;
     *)
-      echo $1
+      echo "$1"
       ;;
   esac
 }
@@ -130,6 +130,7 @@ if [ -z ${GAME+x} ]; then
 
   $GPTOKEYB "dialog" -c "${GAMEDIR}/gemrb-menu.gptk" &
 
+  # Find all the games, each game has 'chitin.key' so we can use that to find them.
   readarray -d '' GAMEEXE < <(find games/ -maxdepth 2 -iname 'chitin.key' -print0)
   IFS=$'\n' GAMEEXES=($(sort <<<"${GAMEEXE[*]}"))
   unset IFS
@@ -153,7 +154,7 @@ if [ -z ${GAME+x} ]; then
   OFFSET=0
   if [ -f "${GAMEDIR}/save/last_game" ]; then
     LAST_GAME=$(cat "${GAMEDIR}/save/last_game")
-    LAST_NAME=$(PROPER_GAME_NAME $LAST_GAME)
+    LAST_NAME=$(PROPER_GAME_NAME "$LAST_GAME")
     VN_CHOICES+=(0 "${LAST_NAME}")
     VN_DIRS+=("$LAST_GAME")
     echo "0 -> **${LAST_GAME}** -> ${LAST_NAME}" 2>&1 | tee -a ./log.txt
@@ -258,18 +259,20 @@ printf "\033c" > $CUR_TTY
 
 # Install appropriate GemRB.cfg
 GAMEID=$(PROPER_GAME_ID "$GAME")
+
 if [ ! -f "${GAMEDIR}/games/${GAME}/GemRB.cfg" ]; then
-  if [ -f "${GAMEDIR}/configs/GemRB.cfg.${GAMELC}" ]; then
+  if [ -f "${GAMEDIR}/configs/GemRB.cfg.${GAMEID}" ]; then
     # Does one for this game exist?
-    $ESUDO cp -v "${GAMEDIR}/configs/GemRB.cfg.${GAMELC}" "${GAMEDIR}/games/${GAME}/GemRB.cfg"
+    $ESUDO cp -v "${GAMEDIR}/configs/GemRB.cfg.${GAMEID}" "${GAMEDIR}/games/${GAME}/GemRB.cfg"
   else
     # Otherwise use the default one
     $ESUDO cp -v "${GAMEDIR}/configs/GemRB.cfg.default" "${GAMEDIR}/games/${GAME}/GemRB.cfg"
   fi
 fi
 
-if [ -f "${GAMEDIR}/gemrb-${GAMELC}.gptk" ]; then
-  GPTOKEYB_CFG="${GAMEDIR}/gemrb-${GAMELC}.gptk"
+# Use game specific controller config if it exists.
+if [ -f "${GAMEDIR}/gemrb-${GAMEID}.gptk" ]; then
+  GPTOKEYB_CFG="${GAMEDIR}/gemrb-${GAMEID}.gptk"
 else
   GPTOKEYB_CFG="${GAMEDIR}/gemrb.gptk"
 fi
@@ -283,7 +286,7 @@ export PYTHONHOME="$GAMEDIR"
 export LD_LIBRARY_PATH="$GAMEDIR/lib:$LD_LIBRARY_PATH"
 
 $GPTOKEYB "gemrb" -c "${GPTOKEYB_CFG}" textinput &
-$TASKSET ./gemrb "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
+$TASKSET ./gemrb -c "${GAMEDIR}/games/${GAME}/GemRB.cfg" "${GAMEDIR}/games/${GAME}/" 2>&1 | $ESUDO tee -a ./log.txt
 
 $ESUDO kill -9 $(pidof gptokeyb)
 unset LD_LIBRARY_PATH

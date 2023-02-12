@@ -139,14 +139,14 @@ GUIEnhancements = 15
 #SkipIntroVideos=1
 
 # Draw Frames per Second info [Boolean]
-DrawFPS=1
+#DrawFPS=1
 
 # Show unexplored parts of a map
 #GCDebug=1536
 
 # Enable debug and cheat keystrokes, see docs/en/CheatKeys.txt
 #   full listing
-EnableCheatKeys=1
+#EnableCheatKeys=1
 
 # Developer debug mode toggle (see DebugModeBits enum)
 #DebugMode=0
@@ -196,7 +196,7 @@ CachePath=./Cache2/
 #  subdir in the GamePath directory.                #
 #####################################################
 
-SavePath=./save/
+#SavePath=./save/
 
 ###### HERE BE DRAGONS #############################
 # You shouldn't need to change any paths below this point.
@@ -332,7 +332,7 @@ SavePath=./save/
 # Changing this to 3.
 
 # default is 0
-MouseFeedback=0
+#MouseFeedback=0
 
 # force enable touch input (in case autodetection fails or for hybrids)
 TouchInput=0
