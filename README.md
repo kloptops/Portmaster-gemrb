@@ -1,3 +1,7 @@
+# THIS REPO IS DEPRECATED
+
+Please see [Portmaster-misc](https://github.com/kloptops/Portmaster-misc) for future updates.
+
 # Portmaster-GemRB
 
 This is the configuration files and the required steps to build the GemRB engine for handheld emulator devices (Anbernic RG351V/MP, RG353P/V/M, RG552, etc.) using the PortMaster scripts for launching.
